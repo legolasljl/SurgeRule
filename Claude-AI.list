@@ -1,0 +1,42 @@
+# Route these to a supported-region proxy group (e.g. a US node).
+# --- 原有规则 ---
+DOMAIN-SUFFIX,anthropic.com
+DOMAIN-SUFFIX,clau.de
+DOMAIN-SUFFIX,claude.ai
+DOMAIN-SUFFIX,claude.dev
+DOMAIN-SUFFIX,claude.com
+DOMAIN-SUFFIX,claudemcpclient.com
+DOMAIN-SUFFIX,claudemcpcontent.com
+DOMAIN-SUFFIX,claudeusercontent.com
+DOMAIN-SUFFIX,statsig.com
+DOMAIN-SUFFIX,featuregates.org
+DOMAIN-SUFFIX,sentry.io
+DOMAIN,cdn.usefathom.com
+DOMAIN,accounts.google.com
+DOMAIN,api.github.com
+PROCESS-NAME,Claude
+PROCESS-NAME,Claude Helper
+PROCESS-NAME,claude
+DOMAIN-SUFFIX,muse.ai
+DOMAIN-SUFFIX,museai.com
+DOMAIN-SUFFIX,ecto1.ai
+# --- 新增：来自 wquguru/one-exit ---
+DOMAIN-SUFFIX,modelcontextprotocol.io
+DOMAIN-KEYWORD,anthropic
+DOMAIN-KEYWORD,claude
+IP-CIDR,160.79.104.0/21,no-resolve
+IP-ASN,399358,no-resolve
+PROCESS-NAME,com.anthropic.claude
+DOMAIN-SUFFIX,usefathom.com
+DOMAIN-KEYWORD,browser-intake
+DOMAIN-SUFFIX,datadoghq.com
+DOMAIN-SUFFIX,growthbook.io
+DOMAIN-SUFFIX,siftscience.com
+DOMAIN-SUFFIX,segment.io
+DOMAIN-SUFFIX,stripe.com
+DOMAIN-SUFFIX,stripe.network
+DOMAIN-SUFFIX,stripecdn.com
+DOMAIN-SUFFIX,hcaptcha.com
+DOMAIN-SUFFIX,challenges.cloudflare.com
+DOMAIN-SUFFIX,intercom.io
+DOMAIN-SUFFIX,intercomcdn.com
