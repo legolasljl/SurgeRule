@@ -1,0 +1,33 @@
+# Apple Intelligence / Siri / Private Relay rules
+# Merged from RocM301/Apple-Rule (Apple-AI.list + Apple AI-New), deduped; guzzoni fix.
+# Route to a supported-region proxy group (e.g. a US node). No policy names here.
+# --- Siri ---
+DOMAIN,guzzoni.apple.com
+DOMAIN,api-siri-prod.apple.com
+DOMAIN,seed.siri.apple.com
+DOMAIN-SUFFIX,smoot.apple.com
+DOMAIN-KEYWORD,siri
+# --- Private Relay / mask ---
+DOMAIN-SUFFIX,apple-relay.apple.com
+DOMAIN-SUFFIX,apple-relay.cloudflare.com
+DOMAIN-SUFFIX,apple-relay.fastly-edge.com
+DOMAIN-SUFFIX,apple-relay.mask.apple-dns.net
+DOMAIN,apple-relay.akamaized.net
+DOMAIN,apple-carry-relay.cloudflare.com
+DOMAIN-SUFFIX,cp4.cloudflare.com
+DOMAIN,mask-api.icloud.com
+DOMAIN,mask-api.fe.apple-dns.net
+DOMAIN,mask-api.fe2.apple-dns.net
+DOMAIN,mask-t.apple-dns.net
+DOMAIN,mask.apple-dns.net
+DOMAIN-SUFFIX,mask.icloud.com
+DOMAIN-SUFFIX,mask-h2.icloud.com
+# --- iCloud gateway / probes ---
+DOMAIN-SUFFIX,gateway.icloud.com
+DOMAIN,probe.icloud.com
+DOMAIN,metrics.icloud.com
+# --- Location / misc ---
+DOMAIN-SUFFIX,gspe1-ssl.ls.apple.com
+DOMAIN-SUFFIX,ls.apple.com
+DOMAIN,wps.apple.com
+DOMAIN-SUFFIX,apps.mzstatic.com

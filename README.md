@@ -18,6 +18,14 @@ Surge example (replace `<POLICY>` with your proxy group):
 RULE-SET,https://raw.githubusercontent.com/legolasljl/SurgeRule/main/Claude-AI.list,<POLICY>
 ```
 
+## Apple Intelligence / Siri / Private Relay
+
+Raw URL:
+
+```
+https://raw.githubusercontent.com/legolasljl/SurgeRule/main/Apple-AI.list
+```
+
 ### Notes
 
 - `PROCESS-NAME` rules only work on local clients (macOS / Windows / iOS apps); they have no effect on routers or remote gateways.
