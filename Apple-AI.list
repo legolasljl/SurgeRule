@@ -10,15 +10,28 @@
 # PCC architecture overview (not a domain allowlist):
 #   https://security.apple.com/blog/private-cloud-compute/
 #
-# NOT Private Relay: iCloud Private Relay uses mask*.icloud.com / mask-api.icloud.com
-# (same 101555 page, iCloud section). Those are intentionally omitted here to avoid
-# conflating Private Relay with PCC and to avoid generic Apple/iCloud regressions.
+# NOT iCloud Private Relay: Private Relay uses mask.icloud.com / mask-h2.icloud.com /
+# mask-api.icloud.com and DNS aliases like mask.apple-dns.net (101555 iCloud section;
+# https://developer.apple.com/icloud/prepare-your-network-for-icloud-private-relay/).
+# Those Private Relay hosts stay omitted to avoid Safari-relay / iCloud regressions.
 #
-# Removed vs older Apple-AI.list (regression / over-broad):
+# Restored after independent recheck (NOT removed solely for absence from 101555):
+#   - apple-relay.mask.apple-dns.net — community-labeled CNAME for apple-relay.apple.com
+#     (AI Extensions), distinct from Private Relay mask.apple-dns.net:
+#       https://raw.githubusercontent.com/hagezi/dns-blocklists/main/share/apple-private-relay.txt
+#       https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/apple-intelligence
+#   - apple-carry-relay.cloudflare.com — community/hagezi addition after staging.* sightings;
+#     purpose between AI relay vs Private Relay remains uncertain; kept narrow:
+#       https://github.com/hagezi/dns-blocklists/issues/6422
+#       https://raw.githubusercontent.com/hagezi/dns-blocklists/main/share/apple-private-relay.txt
+#
+# Still removed vs older Apple-AI.list (regression / over-broad / confirmed Private Relay):
 #   - guzzoni / smoot / DOMAIN-KEYWORD,siri → moved or dropped (see Apple-Siri-Direct.list)
 #   - DOMAIN-SUFFIX,ls.apple.com → too broad (Maps / other GeoServices)
 #   - DOMAIN-SUFFIX,apps.mzstatic.com → App Store CDN catch-all
-#   - mask* / gateway.icloud.com / probe|metrics.icloud.com → Private Relay / general iCloud
+#   - mask.icloud.com / mask-h2 / mask-api* / mask.apple-dns.net / mask-t.apple-dns.net
+#       → iCloud Private Relay / general mask DNS (not apple-relay.mask.*)
+#   - gateway.icloud.com / probe|metrics.icloud.com → general iCloud
 #
 # --- Official PCC / Apple Intelligence Extensions (101555) ---
 DOMAIN-SUFFIX,apple-relay.cloudflare.com
@@ -27,6 +40,14 @@ DOMAIN-SUFFIX,apple-relay.fastly-edge.com
 # Cloudflare catch; DOMAIN-SUFFIX,cloudflare.com must NEVER appear here.
 DOMAIN,cp4.cloudflare.com
 DOMAIN-SUFFIX,apple-relay.apple.com
+#
+# --- Community AI-relay aliases / variants (NOT in Apple 101555 AI table) ---
+# CNAME-style alias for apple-relay.apple.com (AI Extensions). Name contains "mask" but
+# is NOT the Private Relay apex mask.apple-dns.net.
+DOMAIN-SUFFIX,apple-relay.mask.apple-dns.net
+# UNCERTAIN purpose (AI vs Private Relay). Domain-SUFFIX catches staging.* reported in
+# hagezi#6422 while staying scoped to apple-carry-relay.cloudflare.com.
+DOMAIN-SUFFIX,apple-carry-relay.cloudflare.com
 #
 # --- Community / maintained rules (NOT in Apple 101555 AI table) ---
 # gspe1-ssl.ls.apple.com — internet-based region / Geo Country Code probe (pep/gcc).
@@ -40,8 +61,8 @@ DOMAIN-SUFFIX,apple-relay.apple.com
 #       https://github.com/Johnshall/Shadowrocket-ADBlock-Rules-Forever/issues/601
 DOMAIN,gspe1-ssl.ls.apple.com
 #
-# UNCERTAIN: apple-relay.akamaized.net — present in prior Apple-AI.list / some screenshots;
-# not listed in Apple 101555 AI/Siri table. Kept as exact DOMAIN only.
+# UNCERTAIN: apple-relay.akamaized.net — present in prior Apple-AI.list / some screenshots /
+# hagezi Apple Intelligence section; not listed in Apple 101555 AI/Siri table.
 DOMAIN,apple-relay.akamaized.net
 #
 # --- ChatGPT / OpenAI (Apple Intelligence extension companion) ---

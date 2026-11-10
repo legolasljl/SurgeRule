@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Deterministic matcher validation for Surge classical RULE-SET lists.
 
-Validates syntax, cross-list duplicates/shadowing, and representative
-positive/negative host cases. Does not claim on-device success.
+Validates syntax, cross-list duplicates/shadowing, representative
+positive/negative host cases, and README-documented combined ordering
+(Direct → AI proxy → Claude → broad apple.com catch-all).
+Does not claim on-device success.
 """
 
 from __future__ import annotations
@@ -36,6 +38,9 @@ RULE_RE = re.compile(
     r"(?P<value>[^,]+?)(?:,(?P<opt>no-resolve))?$"
 )
 
+# Synthetic local catch-all used only in combined-order tests (not shipped in lists).
+BROAD_APPLE_DIRECT = ("local-catchall", "DOMAIN-SUFFIX", "apple.com", None)
+
 
 def parse_list(path: Path) -> list[tuple[str, str, str | None]]:
     rules: list[tuple[str, str, str | None]] = []
@@ -48,7 +53,6 @@ def parse_list(path: Path) -> list[tuple[str, str, str | None]]:
         if len(parts) >= 3 and parts[2] not in {"no-resolve"} and not parts[2].startswith(
             ("no-resolve", "extended-matching")
         ):
-            # Allow "no-resolve" only as third field for IP rules.
             if parts[2] not in {"no-resolve"}:
                 raise AssertionError(
                     f"{path.name}:{lineno}: policy-like third field forbidden: {line!r}"
@@ -85,6 +89,16 @@ def first_match(
         if atype.startswith("DOMAIN") and domain_matches(host, atype, value):
             return list_name, atype, value
     return None
+
+
+def expand_lists(
+    parsed: dict[str, list[tuple[str, str, str | None]]], names: list[str]
+) -> list[tuple[str, str, str, str | None]]:
+    ordered: list[tuple[str, str, str, str | None]] = []
+    for fname in names:
+        for atype, value, opt in parsed[fname]:
+            ordered.append((fname, atype, value, opt))
+    return ordered
 
 
 def main() -> int:
@@ -141,18 +155,33 @@ def main() -> int:
     ]
     for fname, atype, value in forbidden_substrings:
         if (atype, value) in {(a, v) for a, v, _ in parsed[fname]}:
-            # Special-case: DOMAIN,cp4.cloudflare.com is allowed; DOMAIN-SUFFIX,cloudflare.com not.
             errors.append(f"forbidden matcher present: {fname} {atype},{value}")
 
-    # Ensure guzzoni is only in Direct, not AI
+    # Ensure guzzoni is only in Direct, not AI; Private Relay apex hosts stay out of AI
+    private_relay_forbidden = {
+        "mask.icloud.com",
+        "mask-h2.icloud.com",
+        "mask-api.icloud.com",
+        "mask.apple-dns.net",
+        "mask-t.apple-dns.net",
+        "mask-api.fe.apple-dns.net",
+        "mask-api.fe2.apple-dns.net",
+    }
     ai_values = parsed["Apple-AI.list"]
     for atype, value, _ in ai_values:
         if "guzzoni" in value:
             errors.append("guzzoni must not remain in Apple-AI.list (moved to Direct)")
-        if value in {"mask.icloud.com", "mask-h2.icloud.com", "mask-api.icloud.com"} or (
-            atype.startswith("DOMAIN") and value.startswith("mask.") and "icloud" in value
-        ):
+        if value in private_relay_forbidden:
             errors.append(f"Private Relay host should not be in Apple-AI.list: {atype},{value}")
+
+    # Required restored community AI-relay aliases (independent recheck)
+    ai_pairs = {(a, v) for a, v, _ in ai_values}
+    for required in (
+        ("DOMAIN-SUFFIX", "apple-relay.mask.apple-dns.net"),
+        ("DOMAIN-SUFFIX", "apple-carry-relay.cloudflare.com"),
+    ):
+        if required not in ai_pairs:
+            errors.append(f"Apple-AI.list missing restored matcher {required[0]},{required[1]}")
 
     # Claude preservation smoke: anthropic + muse still present
     claude_vals = {v for _a, v, _ in parsed["Claude-AI.list"]}
@@ -160,11 +189,31 @@ def main() -> int:
         if must not in claude_vals and not any(must in v for v in claude_vals):
             errors.append(f"Claude-AI.list missing expected {must}")
 
+    # README must not recommend catch-alls between Direct and Apple-AI
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    if "Your other Apple / China / system catch-alls go here if you use them" in readme:
+        errors.append("README still inserts catch-alls between Direct and Apple-AI")
+    if "force `guzzoni` / `smoot` to a proxy **after** these RULE-SETs" in readme:
+        errors.append("README migration still says check AFTER (should be BEFORE)")
+    for needle in (
+        "Apple-Siri-Direct",
+        "BEFORE any Apple.com catch-all",
+        "before** these RULE-SETs",
+        "broad Apple / China / GEOIP",
+    ):
+        if needle.lower() not in readme.lower() and needle not in readme:
+            # soft: ensure key order phrases exist
+            pass
+    if "BEFORE any Apple.com catch-all" not in readme:
+        errors.append("README missing explicit BEFORE any Apple.com catch-all guidance")
+    if "earlier rules win" not in readme.lower() and "Earlier rules win" not in readme:
+        if "earlier rules win" not in readme:
+            errors.append("README should state earlier rules win for migration checks")
+
     # Build deterministic ordered chain: Direct then AI then Claude (domain rules only)
-    ordered: list[tuple[str, str, str, str | None]] = []
-    for fname in ("Apple-Siri-Direct.list", "Apple-AI.list", "Claude-AI.list"):
-        for atype, value, opt in parsed[fname]:
-            ordered.append((fname, atype, value, opt))
+    ordered = expand_lists(
+        parsed, ["Apple-Siri-Direct.list", "Apple-AI.list", "Claude-AI.list"]
+    )
 
     # Positive / negative cases: host -> expected winning list (or None)
     cases: list[tuple[str, str | None]] = [
@@ -181,6 +230,8 @@ def main() -> int:
         ("x.apple-relay.fastly-edge.com", "Apple-AI.list"),
         ("cp4.cloudflare.com", "Apple-AI.list"),
         ("apple-relay.apple.com", "Apple-AI.list"),
+        ("apple-relay.mask.apple-dns.net", "Apple-AI.list"),
+        ("staging.apple-carry-relay.cloudflare.com", "Apple-AI.list"),
         ("gspe1-ssl.ls.apple.com", "Apple-AI.list"),
         ("apple-relay.akamaized.net", "Apple-AI.list"),
         ("api.openai.com", "Apple-AI.list"),
@@ -194,6 +245,7 @@ def main() -> int:
         ("apps.mzstatic.com", None),
         ("mask.icloud.com", None),
         ("mask-api.icloud.com", None),
+        ("mask.apple-dns.net", None),  # Private Relay DNS alias — not AI list
         ("gateway.icloud.com", None),
         ("www.cloudflare.com", None),
         ("something.cp4.cloudflare.com", None),  # DOMAIN exact only for cp4
@@ -201,11 +253,9 @@ def main() -> int:
         ("apple.com", None),
     ]
 
-    # Shadow check: hosts that should hit Direct must not be reachable only via AI
     for host, expected in cases:
         hit = first_match(host, ordered)
         got = hit[0] if hit else None
-        # For negatives expected None: also ignore Claude accidental hits only if host clearly Claude — none of negatives are.
         if expected is None:
             if got in {"Apple-Siri-Direct.list", "Apple-AI.list"}:
                 errors.append(f"negative case {host} unexpectedly matched {got} via {hit}")
@@ -213,36 +263,81 @@ def main() -> int:
             if got != expected:
                 errors.append(f"case {host}: expected {expected}, got {got} ({hit})")
 
-    # Suffix/exact shadowing report within Apple lists (informational hard-fail if Direct suffix
-    # would always win over an AI more-specific rule for same tree — currently none expected).
-    # Example hard fail: if AI had DOMAIN,api.smoot.apple.com while Direct has SUFFIX smoot.
+    # Suffix/exact shadowing: Direct must not steal AI hosts when ordered correctly
     for atype, value, _ in parsed["Apple-AI.list"]:
         if atype not in {"DOMAIN", "DOMAIN-SUFFIX"}:
             continue
-        # If Direct already matches this host via suffix, AI entry is shadowed when Direct is first.
-        probe_host = value if atype == "DOMAIN" else f"probe.{value}"
-        # For DOMAIN-SUFFIX value itself as host:
         hosts_to_probe = [value]
         if atype == "DOMAIN-SUFFIX":
             hosts_to_probe.append(f"x.{value}")
         for h in hosts_to_probe:
             hit = first_match(h, ordered)
             if hit and hit[0] == "Apple-Siri-Direct.list" and (atype, value) in ai:
-                # Only error if the AI rule is the one that would have matched in isolation
                 if domain_matches(h, atype, value):
                     errors.append(
                         f"shadowed AI rule {atype},{value}: host {h} won by Direct {hit[1]},{hit[2]}"
                     )
 
+    # Combined example order: Direct → AI → Claude → DOMAIN-SUFFIX,apple.com,DIRECT
+    combined_correct = ordered + [BROAD_APPLE_DIRECT]
+    proxy_must_win = [
+        "gspe1-ssl.ls.apple.com",
+        "apple-relay.apple.com",
+        "apple-relay.cloudflare.com",
+        "apple-relay.mask.apple-dns.net",
+        "staging.apple-carry-relay.cloudflare.com",
+        "cp4.cloudflare.com",
+    ]
+    for host in proxy_must_win:
+        hit = first_match(host, combined_correct)
+        if not hit or hit[0] != "Apple-AI.list":
+            errors.append(
+                f"combined correct order: {host} should win Apple-AI.list, got {hit}"
+            )
+
+    # Direct hosts still Direct even with broad apple.com after AI
+    for host in ("guzzoni.apple.com", "api.smoot.apple.com", "dejavu.apple.com"):
+        hit = first_match(host, combined_correct)
+        if not hit or hit[0] != "Apple-Siri-Direct.list":
+            errors.append(
+                f"combined correct order: {host} should win Direct, got {hit}"
+            )
+
+    # Generic apple.com host falls through to catch-all only after AI
+    hit = first_match("maps.apple.com", combined_correct)
+    if not hit or hit[0] != "local-catchall":
+        errors.append(f"combined correct order: maps.apple.com should hit catch-all, got {hit}")
+
+    # Wrong order RELEASE BLOCKER simulation: Direct → broad apple.com → AI
+    # (catch-all steals gspe1 / apple-relay.apple.com from proxy)
+    wrong = (
+        expand_lists(parsed, ["Apple-Siri-Direct.list"])
+        + [BROAD_APPLE_DIRECT]
+        + expand_lists(parsed, ["Apple-AI.list", "Claude-AI.list"])
+    )
+    stolen = []
+    for host in ("gspe1-ssl.ls.apple.com", "apple-relay.apple.com"):
+        hit = first_match(host, wrong)
+        if hit and hit[0] == "local-catchall":
+            stolen.append(host)
+        else:
+            errors.append(
+                f"wrong-order fixture expected steal of {host} by apple.com catch-all, got {hit}"
+            )
+    if len(stolen) != 2:
+        errors.append("wrong-order fixture did not demonstrate catch-all steal for both hosts")
+
+    # README order prose sanity: Apple-AI example line must appear before catch-all comment block
+    # Find first RULE-SET Apple-AI then ensure next catch-all example is after it conceptually —
+    # already covered by string checks above.
+
     if errors:
-        # Dedupe while preserving order
         uniq = list(dict.fromkeys(errors))
         print(f"FAIL ({len(uniq)} issues)")
         for e in uniq:
             print(" -", e)
         return 1
 
-    # Summary counts
     print("PASS")
     for name, rules in parsed.items():
         by = defaultdict(int)
@@ -250,6 +345,10 @@ def main() -> int:
             by[a] += 1
         print(f"  {name}: {len(rules)} rules {dict(by)}")
     print(f"  cases checked: {len(cases)}")
+    print(
+        "  combined-order: Direct→AI→Claude→DOMAIN-SUFFIX,apple.com "
+        f"proxy-wins={len(proxy_must_win)} wrong-order-steal-ok={len(stolen)}"
+    )
     return 0
 
 

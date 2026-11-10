@@ -20,10 +20,15 @@ DOMAIN-SUFFIX,smoot.apple.com
 #
 # --- Community Siri-associated (NOT listed in Apple 101555 AI/Siri table) ---
 # UNCERTAIN routing strength: documented/community purpose ≠ must-DIRECT.
-# Netify labels dejavu/sequoia as Apple Siri hosts; Aegis labels sequoia as translation.
+# Fetched community labels (purpose claims only):
+#   https://www.netify.ai/resources/hostnames/siri.apple.com  → Apple Siri
+#   https://www.netify.ai/resources/hostnames/dejavu.apple.com → Apple Siri
+#   https://www.netify.ai/resources/hostnames/sequoia.apple.com → Apple Siri
+#   https://raw.githubusercontent.com/Thoseyearsbrian/Aegis/main/rules/Apple.list
+#       → sequoia.apple.com labeled “翻译服务接口”; siri.apple.com labeled Siri
 # Kept narrow (no DOMAIN-KEYWORD,siri) to avoid shadowing unrelated Apple traffic.
 DOMAIN-SUFFIX,siri.apple.com
 DOMAIN,api-siri-prod.apple.com
 DOMAIN,dejavu.apple.com
-# UNCERTAIN: sequoia.apple.com — Netify: Siri; Aegis Apple.list: translation. Included narrowly.
+# UNCERTAIN: sequoia.apple.com — Netify: Siri; Aegis: translation. Included narrowly.
 DOMAIN,sequoia.apple.com
