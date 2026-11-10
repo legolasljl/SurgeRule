@@ -1,25 +1,31 @@
-# Apple Siri / Search — bind this RULE-SET to DIRECT (see README).
-# Matchers only. No policy / proxy-group names.
+# DEPRECATED — do not bind this RULE-SET to DIRECT.
+# Canonical file: Apple-Siri.list
+#   https://raw.githubusercontent.com/legolasljl/SurgeRule/main/Apple-Siri.list
+# Kept temporarily so existing subscribers of this path do not break. Prefer
+# migrating the URL and binding both Apple-Siri.list and Apple-AI.list to the
+# SAME non-mainland proxy group (e.g. 🍎 Siri). Matcher body mirrors Apple-Siri.list.
 #
-# Official reachability (NOT a must-DIRECT proof):
+# Apple Siri / Search — matchers only. No policy / proxy-group names.
+#
+# Operational note (owner iPhone real-device test; NOT an Apple region mandate):
+#   Networked Siri queries worked only when this set and Apple-AI.list shared the
+#   same non-mainland-China proxy exit. A Taiwan node worked; DIRECT failed;
+#   at least one US node also failed (possibly node-specific). Verify the exit
+#   that works on your device — Apple does not document a required egress region.
+#
+# Official reachability (purpose / MitM guidance only — NOT routing policy):
 #   https://support.apple.com/en-us/101555  § Apple Intelligence, Siri, and Search
 #   - guzzoni.apple.com — Siri and dictation requests (Supports proxies: —)
 #   - *.smoot.apple.com — Search services including Siri/Spotlight/Lookup/… (Supports proxies: —)
-# Official docs require access without HTTPS interception; they do not mandate DIRECT vs proxy.
-# For CN-model + Mandarin (普通话) Siri, community operational reports prefer DIRECT so voice
-# traffic is not forced through an overseas egress. Treat must-DIRECT as operationally motivated,
-# not Apple-documented policy. MitM/SSL inspection on these hosts is unsupported (Apple).
+# Official docs require access without HTTPS interception; they do not mandate
+# DIRECT vs proxy, and they do not prescribe any country/region for egress.
 #
-# Contrast: some maintained “unlock” lists (e.g. ruleset.isteed.cc AppleIntelligence.conf,
-# RocM301/Apple-Rule) place guzzoni/smoot in the same proxy set as PCC. That conflicts with the
-# CN Mandarin DIRECT preference — do not merge those lists blindly.
-#
-# --- Official (101555) — recommended DIRECT for this repo’s CN Mandarin use case ---
+# --- Official (101555) — Siri / Search hosts ---
 DOMAIN-SUFFIX,guzzoni.apple.com
 DOMAIN-SUFFIX,smoot.apple.com
 #
 # --- Community Siri-associated (NOT listed in Apple 101555 AI/Siri table) ---
-# UNCERTAIN routing strength: documented/community purpose ≠ must-DIRECT.
+# UNCERTAIN routing strength: documented/community purpose ≠ required egress region.
 # Fetched community labels (purpose claims only):
 #   https://www.netify.ai/resources/hostnames/siri.apple.com  → Apple Siri
 #   https://www.netify.ai/resources/hostnames/dejavu.apple.com → Apple Siri
