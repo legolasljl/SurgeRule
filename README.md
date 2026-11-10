@@ -10,23 +10,30 @@ Default branch for raw URLs: `main`.
 
 Surge matches **top-down; earlier rules win**. Required order:
 
-1. **Apple-Siri-Direct** → `DIRECT`
-2. **Apple-AI** → user-selected supported-region proxy (often US)
+1. **Apple-Siri** → same non-mainland proxy group as Apple-AI (e.g. a dedicated `🍎 Siri` group)
+2. **Apple-AI** → **the same** proxy group / exit as Apple-Siri
 3. **Claude-AI** (and other narrow AI sets) → their proxy groups
 4. **Only then** broad Apple / China / GEOIP / LAN catch-alls
 5. `FINAL`
 
-**RELEASE BLOCKER if inverted:** placing a broad Apple/China catch-all **between** Direct and Apple-AI (or before Apple-AI) can steal `gspe1-ssl.ls.apple.com`, `apple-relay.apple.com`, and other `*.apple.com` AI hosts into DIRECT / China policy so they never reach the proxy set.
+**Why the same exit:** owner iPhone real-device testing found networked Siri queries only worked when `Apple-Siri.list` and `Apple-AI.list` shared one non-mainland-China proxy exit (a Taiwan node worked; `DIRECT` failed; at least one US node also failed, possibly node-specific). Pick an exit you verify works — this is operational experience, **not** an Apple-documented region requirement.
+
+**RELEASE BLOCKER if inverted:** placing a broad Apple/China catch-all **between** Apple-Siri and Apple-AI (or before Apple-AI) can steal `gspe1-ssl.ls.apple.com`, `apple-relay.apple.com`, and other `*.apple.com` AI hosts into DIRECT / China policy so they never reach the proxy set.
 
 ```ini
+[Proxy Group]
+# Example: one dedicated group so Siri + Apple Intelligence share the same exit.
+# Pick a non-mainland node you have verified works on-device (region is not Apple-mandated).
+🍎 Siri = select, <your-verified-non-mainland-node>, <fallback-nodes...>
+
 [Rule]
-# 1) Siri / Search — DIRECT (narrow)
-RULE-SET,https://raw.githubusercontent.com/legolasljl/SurgeRule/main/Apple-Siri-Direct.list,DIRECT
+# 1) Siri / Search — SAME proxy group as Apple-AI (narrow)
+RULE-SET,https://raw.githubusercontent.com/legolasljl/SurgeRule/main/Apple-Siri.list,🍎 Siri
 
 # 2) Apple Intelligence / PCC / region probe / ChatGPT — BEFORE any Apple.com catch-all
-#    Prefer a low-latency node in an Apple Intelligence–supported region (often US).
-#    Apple documents purpose/reachability only — not a mandatory US/DIRECT policy.
-RULE-SET,https://raw.githubusercontent.com/legolasljl/SurgeRule/main/Apple-AI.list,<AI-POLICY>
+#    Bind to the SAME group/exit as Apple-Siri above.
+#    Apple documents purpose/reachability only — not a mandatory region or DIRECT policy.
+RULE-SET,https://raw.githubusercontent.com/legolasljl/SurgeRule/main/Apple-AI.list,🍎 Siri
 
 # 3) Other narrow AI (unchanged) — still before broad Apple/China catch-alls
 RULE-SET,https://raw.githubusercontent.com/legolasljl/SurgeRule/main/Claude-AI.list,<POLICY>
@@ -40,7 +47,16 @@ RULE-SET,https://raw.githubusercontent.com/legolasljl/SurgeRule/main/Claude-AI.l
 # FINAL,<default>
 ```
 
-Replace `<AI-POLICY>` / `<POLICY>` with your local proxy group names.
+Replace `🍎 Siri` / `<POLICY>` with your local proxy group names. The important part is that Apple-Siri and Apple-AI point at **one** verified non-mainland exit.
+
+### Migration from `Apple-Siri-Direct.list` (DIRECT → shared proxy)
+
+1. Change the raw URL  
+   `https://raw.githubusercontent.com/legolasljl/SurgeRule/main/Apple-Siri-Direct.list`  
+   → `https://raw.githubusercontent.com/legolasljl/SurgeRule/main/Apple-Siri.list`
+2. Change the policy from `DIRECT` to the **same** proxy group used by `Apple-AI.list` (e.g. `🍎 Siri`). Do **not** leave Siri on DIRECT while Apple-AI is proxied.
+3. Refresh / update the external resource in Surge after pull.
+4. Optional: the old path `Apple-Siri-Direct.list` remains temporarily as a **deprecated duplicate** of the matchers (header warns against DIRECT). Prefer the new URL so a future removal of the old path does not break your config.
 
 ### Migration from the previous single `Apple-AI.list` subscription
 
@@ -48,18 +64,24 @@ Older `Apple-AI.list` mixed Siri hosts (e.g. `guzzoni`), PCC relays, Private Rel
 
 1. Keep using  
    `https://raw.githubusercontent.com/legolasljl/SurgeRule/main/Apple-AI.list`  
-   as the **proxy** RULE-SET (backward-compatible URL; contents are now the proxy-only set).
+   as the **proxy** RULE-SET (backward-compatible URL; contents are the Apple Intelligence / PCC / ChatGPT set).
 2. **Add** a new RULE-SET **immediately above** `Apple-AI.list`:  
-   `https://raw.githubusercontent.com/legolasljl/SurgeRule/main/Apple-Siri-Direct.list` → `DIRECT`.  
-   Do **not** insert broad Apple/China catch-alls between Direct and Apple-AI.
+   `https://raw.githubusercontent.com/legolasljl/SurgeRule/main/Apple-Siri.list` → **same** proxy group as Apple-AI (e.g. `🍎 Siri`).  
+   Do **not** insert broad Apple/China catch-alls between Apple-Siri and Apple-AI.
 3. Refresh / update the external resource in Surge after pull.
-4. Re-check local inline / RULE-SET lines that force `guzzoni` / `smoot` / AI relays to a proxy (or wrongly to DIRECT) **before** these RULE-SETs — earlier rules win; lines **after** these sets lose and are not the usual steal path.
+4. Re-check local inline / RULE-SET lines that force `guzzoni` / `smoot` / AI relays to a mismatched policy (or wrongly to DIRECT) **before** these RULE-SETs — earlier rules win; lines **after** these sets lose and are not the usual steal path.
 5. Move any broad `DOMAIN-SUFFIX,apple.com` / Apple / China / GEOIP catch-alls to **after** Apple-AI (and preferably after Claude).
 6. Optional: remove any local duplicate `DOMAIN*,guzzoni...` lines that only existed to patch the old list.
 
-## Apple-Siri-Direct.list (→ DIRECT)
+## Apple-Siri.list (→ same proxy as Apple-AI)
 
 Raw URL:
+
+```
+https://raw.githubusercontent.com/legolasljl/SurgeRule/main/Apple-Siri.list
+```
+
+Deprecated alias (same matchers; do **not** bind to `DIRECT`):
 
 ```
 https://raw.githubusercontent.com/legolasljl/SurgeRule/main/Apple-Siri-Direct.list
@@ -67,14 +89,14 @@ https://raw.githubusercontent.com/legolasljl/SurgeRule/main/Apple-Siri-Direct.li
 
 | Matcher | Documented / claimed purpose | Routing note |
 | --- | --- | --- |
-| `DOMAIN-SUFFIX,guzzoni.apple.com` | Siri & dictation ([Apple 101555](https://support.apple.com/en-us/101555)) | Recommended DIRECT for CN-model Mandarin Siri. Apple requires reachability; **does not** document must-DIRECT. |
+| `DOMAIN-SUFFIX,guzzoni.apple.com` | Siri & dictation ([Apple 101555](https://support.apple.com/en-us/101555)) | Bind to the **same** verified non-mainland exit as Apple-AI. Apple requires reachability; **does not** document DIRECT or a required region. |
 | `DOMAIN-SUFFIX,smoot.apple.com` | Search incl. Siri/Spotlight/… ([Apple 101555](https://support.apple.com/en-us/101555)) | Same. Also affects non-Siri search surfaces — intentional narrow trade-off. |
-| `DOMAIN-SUFFIX,siri.apple.com` | [Netify: Apple Siri](https://www.netify.ai/resources/hostnames/siri.apple.com); also [Aegis Apple.list](https://raw.githubusercontent.com/Thoseyearsbrian/Aegis/main/rules/Apple.list) | **Uncertain** — not in 101555 AI/Siri table; purpose label ≠ must-DIRECT. |
+| `DOMAIN-SUFFIX,siri.apple.com` | [Netify: Apple Siri](https://www.netify.ai/resources/hostnames/siri.apple.com); also [Aegis Apple.list](https://raw.githubusercontent.com/Thoseyearsbrian/Aegis/main/rules/Apple.list) | **Uncertain** — not in 101555 AI/Siri table; purpose label ≠ required egress region. |
 | `DOMAIN,api-siri-prod.apple.com` | Prior list / Siri API host | **Uncertain** — not in 101555 table. |
 | `DOMAIN,dejavu.apple.com` | [Netify: Apple Siri](https://www.netify.ai/resources/hostnames/dejavu.apple.com) | **Uncertain** — not in 101555 table. |
 | `DOMAIN,sequoia.apple.com` | [Netify: Siri](https://www.netify.ai/resources/hostnames/sequoia.apple.com); [Aegis: 翻译服务接口](https://raw.githubusercontent.com/Thoseyearsbrian/Aegis/main/rules/Apple.list) | **Uncertain** — conflicting labels; exact DOMAIN only. |
 
-## Apple-AI.list (→ user-selected proxy)
+## Apple-AI.list (→ same proxy as Apple-Siri)
 
 Raw URL:
 
@@ -84,13 +106,13 @@ https://raw.githubusercontent.com/legolasljl/SurgeRule/main/Apple-AI.list
 
 | Matcher | Documented / claimed purpose | Routing note |
 | --- | --- | --- |
-| `DOMAIN-SUFFIX,apple-relay.cloudflare.com` | Private Cloud Compute ([Apple 101555](https://support.apple.com/en-us/101555)) | Supported-region proxy is a common operational choice; Apple only requires access (Supports proxies: —). **Not** iCloud Private Relay. |
+| `DOMAIN-SUFFIX,apple-relay.cloudflare.com` | Private Cloud Compute ([Apple 101555](https://support.apple.com/en-us/101555)) | Share the same verified non-mainland exit as Apple-Siri; Apple only requires access (Supports proxies: —). **Not** iCloud Private Relay. |
 | `DOMAIN-SUFFIX,apple-relay.fastly-edge.com` | PCC ([Apple 101555](https://support.apple.com/en-us/101555)) | Same. |
 | `DOMAIN,cp4.cloudflare.com` | PCC ([Apple 101555](https://support.apple.com/en-us/101555)) | Exact `DOMAIN` — avoid `DOMAIN-SUFFIX,cloudflare.com`. |
-| `DOMAIN-SUFFIX,apple-relay.apple.com` | Apple Intelligence Extensions ([Apple 101555](https://support.apple.com/en-us/101555)) | ChatGPT extension path; supported-region egress is operational, not officially mandatory. |
+| `DOMAIN-SUFFIX,apple-relay.apple.com` | Apple Intelligence Extensions ([Apple 101555](https://support.apple.com/en-us/101555)) | ChatGPT extension path; shared egress with Siri is operational, not officially mandatory. |
 | `DOMAIN-SUFFIX,apple-relay.mask.apple-dns.net` | Community: CNAME for `apple-relay.apple.com` ([hagezi share list](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/share/apple-private-relay.txt); [v2fly apple-intelligence](https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/apple-intelligence)) | **Not** Private Relay `mask.apple-dns.net`. Restored after recheck. |
 | `DOMAIN-SUFFIX,apple-carry-relay.cloudflare.com` | Community/hagezi after `staging.*` reports ([issue #6422](https://github.com/hagezi/dns-blocklists/issues/6422)) | **Uncertain** AI vs Private Relay; kept narrow; not in 101555. |
-| `DOMAIN,gspe1-ssl.ls.apple.com` | Internet region / GCC probe (`/pep/gcc`) — [iRingo docs](https://nsringo.github.io/guide/GeoServices/location-service) | **Not** Siri voice. **Uncertain must-US**; exact DOMAIN only (not `*.ls.apple.com`). |
+| `DOMAIN,gspe1-ssl.ls.apple.com` | Internet region / GCC probe (`/pep/gcc`) — [iRingo docs](https://nsringo.github.io/guide/GeoServices/location-service) | **Not** Siri voice. Exact DOMAIN only (not `*.ls.apple.com`). Egress region is operational, not Apple-mandated. |
 | `DOMAIN,apple-relay.akamaized.net` | Prior list / [hagezi AI section](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/share/apple-private-relay.txt) | **Uncertain** — absent from 101555 AI table. |
 | `DOMAIN-SUFFIX,openai.com` / `chatgpt.com` / `oaistatic.com` / `oaiusercontent.com` | ChatGPT / OpenAI | Minimal companion domains; not a full OpenAI.list. |
 
@@ -123,7 +145,7 @@ Verified against Surge docs:
 
 - [`always-real-ip`](https://manual.nssurge.com/profile/general.html) — Host List; exempts matching DNS queries from Fake-IP and returns a real upstream answer ([Advanced DNS](https://manual.nssurge.com/dns/advanced.html)). Optional if you observe Siri issues under Fake-IP, e.g. append (do not overwrite your whole list):  
   `guzzoni.apple.com, *.guzzoni.apple.com, *.siri.apple.com, *.smoot.apple.com`
-- [`skip-proxy`](https://manual.nssurge.com/profile/general.html) — on iOS forces listed hosts onto Surge VIF instead of the HTTP system-proxy path; Surge explicitly states it is **not** a way to keep requests off a **proxy policy**. Use `RULE-SET …,DIRECT` for DIRECT routing. Do not treat screenshot advice that equates `skip-proxy` with “global DIRECT” as authoritative.
+- [`skip-proxy`](https://manual.nssurge.com/profile/general.html) — on iOS forces listed hosts onto Surge VIF instead of the HTTP system-proxy path; Surge explicitly states it is **not** a way to keep requests off a **proxy policy**. Use `RULE-SET …,<policy>` for routing (Siri + Apple-AI should share one verified proxy group; do not treat `skip-proxy` as a substitute for that). Do not treat screenshot advice that equates `skip-proxy` with “global DIRECT” as authoritative.
 
 ## iRingo / MitM coexistence (diagnosis, not certainty)
 
@@ -149,4 +171,4 @@ RULE-SET,https://raw.githubusercontent.com/legolasljl/SurgeRule/main/Claude-AI.l
 
 - `PROCESS-NAME` rules only work on local clients (macOS / Windows / iOS apps); they have no effect on routers or remote gateways.
 - `IP-ASN` requires an ASN database (e.g. Surge’s MaxMind / GeoIP ASN data). Without it, ASN rules are skipped.
-- On-device success for CN-model iPhone + Mandarin Siri + Apple Intelligence is **not** claimed from list publication alone; confirm with device traffic captures after review.
+- On-device success for CN-model iPhone + Mandarin Siri + Apple Intelligence is **not** claimed from list publication alone; confirm with device traffic captures after review. Shared non-mainland egress for Apple-Siri + Apple-AI is an operational finding from owner testing, not an Apple region mandate.

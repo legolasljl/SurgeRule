@@ -26,7 +26,7 @@
 #       https://raw.githubusercontent.com/hagezi/dns-blocklists/main/share/apple-private-relay.txt
 #
 # Still removed vs older Apple-AI.list (regression / over-broad / confirmed Private Relay):
-#   - guzzoni / smoot / DOMAIN-KEYWORD,siri → moved or dropped (see Apple-Siri-Direct.list)
+#   - guzzoni / smoot / DOMAIN-KEYWORD,siri → moved or dropped (see Apple-Siri.list)
 #   - DOMAIN-SUFFIX,ls.apple.com → too broad (Maps / other GeoServices)
 #   - DOMAIN-SUFFIX,apps.mzstatic.com → App Store CDN catch-all
 #   - mask.icloud.com / mask-h2 / mask-api* / mask.apple-dns.net / mask-t.apple-dns.net
