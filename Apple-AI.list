@@ -1,33 +1,55 @@
-# Apple Intelligence / Siri / Private Relay rules
-# Merged from RocM301/Apple-Rule (Apple-AI.list + Apple AI-New), deduped; guzzoni fix.
-# Route to a supported-region proxy group (e.g. a US node). No policy names here.
-# --- Siri ---
-DOMAIN,guzzoni.apple.com
-DOMAIN,api-siri-prod.apple.com
-DOMAIN,seed.siri.apple.com
-DOMAIN-SUFFIX,smoot.apple.com
-DOMAIN-KEYWORD,siri
-# --- Private Relay / mask ---
-DOMAIN-SUFFIX,apple-relay.apple.com
+# Apple Intelligence / PCC / region probe / ChatGPT — bind to a user-selected
+# supported-region proxy group (often a low-latency US node). Matchers only.
+# No policy / proxy-group names.
+#
+# Official hosts (purpose only; Apple does NOT prescribe US proxy):
+#   https://support.apple.com/en-us/101555  § Apple Intelligence, Siri, and Search
+#   - apple-relay.cloudflare.com / apple-relay.fastly-edge.com / cp4.cloudflare.com
+#       → Private Cloud Compute (PCC)
+#   - apple-relay.apple.com → Apple Intelligence Extensions (e.g. ChatGPT)
+# PCC architecture overview (not a domain allowlist):
+#   https://security.apple.com/blog/private-cloud-compute/
+#
+# NOT Private Relay: iCloud Private Relay uses mask*.icloud.com / mask-api.icloud.com
+# (same 101555 page, iCloud section). Those are intentionally omitted here to avoid
+# conflating Private Relay with PCC and to avoid generic Apple/iCloud regressions.
+#
+# Removed vs older Apple-AI.list (regression / over-broad):
+#   - guzzoni / smoot / DOMAIN-KEYWORD,siri → moved or dropped (see Apple-Siri-Direct.list)
+#   - DOMAIN-SUFFIX,ls.apple.com → too broad (Maps / other GeoServices)
+#   - DOMAIN-SUFFIX,apps.mzstatic.com → App Store CDN catch-all
+#   - mask* / gateway.icloud.com / probe|metrics.icloud.com → Private Relay / general iCloud
+#
+# --- Official PCC / Apple Intelligence Extensions (101555) ---
 DOMAIN-SUFFIX,apple-relay.cloudflare.com
 DOMAIN-SUFFIX,apple-relay.fastly-edge.com
-DOMAIN-SUFFIX,apple-relay.mask.apple-dns.net
+# Official host is exact cp4.cloudflare.com (no *. prefix). Prefer DOMAIN over a broad
+# Cloudflare catch; DOMAIN-SUFFIX,cloudflare.com must NEVER appear here.
+DOMAIN,cp4.cloudflare.com
+DOMAIN-SUFFIX,apple-relay.apple.com
+#
+# --- Community / maintained rules (NOT in Apple 101555 AI table) ---
+# gspe1-ssl.ls.apple.com — internet-based region / Geo Country Code probe (pep/gcc).
+# Purpose: contextual/region lookup for many Apple services, not Siri voice itself.
+# Community sources treat a supported-region egress as helpful for Apple Intelligence
+# eligibility; this is NOT official must-US proof, and it can affect other services.
+# Use exact DOMAIN — do not expand to DOMAIN-SUFFIX,ls.apple.com.
+# Refs: https://gspe1-ssl.ls.apple.com/pep/gcc
+#       https://ruleset.isteed.cc/List/Source/AppleIntelligence.conf
+#       https://nsringo.github.io/guide/GeoServices/location-service
+#       https://github.com/Johnshall/Shadowrocket-ADBlock-Rules-Forever/issues/601
+DOMAIN,gspe1-ssl.ls.apple.com
+#
+# UNCERTAIN: apple-relay.akamaized.net — present in prior Apple-AI.list / some screenshots;
+# not listed in Apple 101555 AI/Siri table. Kept as exact DOMAIN only.
 DOMAIN,apple-relay.akamaized.net
-DOMAIN,apple-carry-relay.cloudflare.com
-DOMAIN-SUFFIX,cp4.cloudflare.com
-DOMAIN,mask-api.icloud.com
-DOMAIN,mask-api.fe.apple-dns.net
-DOMAIN,mask-api.fe2.apple-dns.net
-DOMAIN,mask-t.apple-dns.net
-DOMAIN,mask.apple-dns.net
-DOMAIN-SUFFIX,mask.icloud.com
-DOMAIN-SUFFIX,mask-h2.icloud.com
-# --- iCloud gateway / probes ---
-DOMAIN-SUFFIX,gateway.icloud.com
-DOMAIN,probe.icloud.com
-DOMAIN,metrics.icloud.com
-# --- Location / misc ---
-DOMAIN-SUFFIX,gspe1-ssl.ls.apple.com
-DOMAIN-SUFFIX,ls.apple.com
-DOMAIN,wps.apple.com
-DOMAIN-SUFFIX,apps.mzstatic.com
+#
+# --- ChatGPT / OpenAI (Apple Intelligence extension companion) ---
+# Minimal core suffixes only. Do NOT import full OpenAI.list here (stripe/sentry/segment/
+# auth0/algolia overlap Claude-AI.list and unrelated SaaS). Prefer a dedicated OpenAI
+# RULE-SET if you need the full ChatGPT web surface.
+# Maintained reference (broader): blackmatrix7 ios_rule_script OpenAI.list
+DOMAIN-SUFFIX,openai.com
+DOMAIN-SUFFIX,chatgpt.com
+DOMAIN-SUFFIX,oaistatic.com
+DOMAIN-SUFFIX,oaiusercontent.com
