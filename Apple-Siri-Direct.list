@@ -1,0 +1,34 @@
+# Apple Siri / Search — bind this RULE-SET to DIRECT (see README).
+# Matchers only. No policy / proxy-group names.
+#
+# Official reachability (NOT a must-DIRECT proof):
+#   https://support.apple.com/en-us/101555  § Apple Intelligence, Siri, and Search
+#   - guzzoni.apple.com — Siri and dictation requests (Supports proxies: —)
+#   - *.smoot.apple.com — Search services including Siri/Spotlight/Lookup/… (Supports proxies: —)
+# Official docs require access without HTTPS interception; they do not mandate DIRECT vs proxy.
+# For CN-model + Mandarin (普通话) Siri, community operational reports prefer DIRECT so voice
+# traffic is not forced through an overseas egress. Treat must-DIRECT as operationally motivated,
+# not Apple-documented policy. MitM/SSL inspection on these hosts is unsupported (Apple).
+#
+# Contrast: some maintained “unlock” lists (e.g. ruleset.isteed.cc AppleIntelligence.conf,
+# RocM301/Apple-Rule) place guzzoni/smoot in the same proxy set as PCC. That conflicts with the
+# CN Mandarin DIRECT preference — do not merge those lists blindly.
+#
+# --- Official (101555) — recommended DIRECT for this repo’s CN Mandarin use case ---
+DOMAIN-SUFFIX,guzzoni.apple.com
+DOMAIN-SUFFIX,smoot.apple.com
+#
+# --- Community Siri-associated (NOT listed in Apple 101555 AI/Siri table) ---
+# UNCERTAIN routing strength: documented/community purpose ≠ must-DIRECT.
+# Fetched community labels (purpose claims only):
+#   https://www.netify.ai/resources/hostnames/siri.apple.com  → Apple Siri
+#   https://www.netify.ai/resources/hostnames/dejavu.apple.com → Apple Siri
+#   https://www.netify.ai/resources/hostnames/sequoia.apple.com → Apple Siri
+#   https://raw.githubusercontent.com/Thoseyearsbrian/Aegis/main/rules/Apple.list
+#       → sequoia.apple.com labeled “翻译服务接口”; siri.apple.com labeled Siri
+# Kept narrow (no DOMAIN-KEYWORD,siri) to avoid shadowing unrelated Apple traffic.
+DOMAIN-SUFFIX,siri.apple.com
+DOMAIN,api-siri-prod.apple.com
+DOMAIN,dejavu.apple.com
+# UNCERTAIN: sequoia.apple.com — Netify: Siri; Aegis: translation. Included narrowly.
+DOMAIN,sequoia.apple.com
